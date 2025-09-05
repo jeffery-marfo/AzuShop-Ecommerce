@@ -6,7 +6,7 @@ import HP from "../assets/images/HP.png";
 import iPhone from "../assets/images/iPhone.png";
 import SamsungS22 from "../assets/images/SamsungS22.png";
 import Lenovo from "../assets/images/Lenovo.png";
-import Camera from "../assets/images/Camera.png";
+import Lens from "../assets/images/Lens.png";
 import SamsungUltra from "../assets/images/SamsungUltra.png";
 import iPad from "../assets/images/iPad.png";
 
@@ -82,7 +82,7 @@ const ShopPage = () => {
      {
       id: 7,
       name: 'Lenovo Thinkpad T14 G1 | i7-10610U | 14"',
-      image: Camera,
+      image: Lens   ,
       specs: "16 GB | 512 GB SSD | Backlit keyboard | FP | Win 11 Home | NO",
       price: "$649.99",
       brand: "Lenovo",
