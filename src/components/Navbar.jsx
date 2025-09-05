@@ -1,17 +1,25 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router'; 
 import { Home, ShoppingBag, ShoppingCart, Heart, LogIn, UserPlus, Menu, X } from 'lucide-react';
-import LoginModal from './LoginModal'; // Adjust the import path as needed
-import RegisterModal from './RegisterModal'; // Adjust the import path as needed
+import LoginModal from './LoginModal';
+import RegisterModal from './RegisterModal';
 
 function Navbar({ initialTab = 'Home', onTabChange }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate(); // Add this hook
 
-  const handleTabClick = (tabName) => {
+  const handleTabClick = (tabName, route) => {
     setActiveTab(tabName);
-    setIsMobileMenuOpen(false); // Close mobile menu when tab is selected
+    setIsMobileMenuOpen(false);
+    
+    // Navigate to route if provided
+    if (route) {
+      navigate(route);
+    }
+    
     // Call parent callback if provided
     if (onTabChange) {
       onTabChange(tabName);
@@ -20,14 +28,14 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
 
   const handleLoginClick = () => {
     setIsLoginModalOpen(true);
-    setIsRegisterModalOpen(false); // Close register modal if open
-    setIsMobileMenuOpen(false); // Close mobile menu
+    setIsRegisterModalOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const handleRegisterClick = () => {
     setIsRegisterModalOpen(true);
-    setIsLoginModalOpen(false); // Close login modal if open
-    setIsMobileMenuOpen(false); // Close mobile menu
+    setIsLoginModalOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const handleCloseLoginModal = () => {
@@ -38,13 +46,11 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
     setIsRegisterModalOpen(false);
   };
 
-  // Function to switch from register to login modal
   const handleSwitchToLogin = () => {
     setIsRegisterModalOpen(false);
     setIsLoginModalOpen(true);
   };
 
-  // Function to switch from login to register modal (if you want to add this to LoginModal)
   const handleSwitchToRegister = () => {
     setIsLoginModalOpen(false);
     setIsRegisterModalOpen(true);
@@ -54,11 +60,12 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  // Updated navigation items with routes
   const navigationItems = [
-    { name: 'Home', icon: Home },
-    { name: 'shop', icon: ShoppingBag },
-    { name: 'Cart', icon: ShoppingCart },
-    { name: 'Favourite', icon: Heart }
+    { name: 'Home', icon: Home, route: '/' },
+    { name: 'shop', icon: ShoppingBag, route: '/shop' }, // Add route here
+    { name: 'Cart', icon: ShoppingCart, route: '/cart' },
+    { name: 'Favourite', icon: Heart, route: '/favourite' }
   ];
 
   const authItems = [
@@ -77,10 +84,10 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
           
           {/* Desktop Navigation Items - Hidden on mobile */}
           <div className="hidden lg:flex items-center space-x-6 xl:space-x-8">
-            {navigationItems.map(({ name, icon: Icon }) => (
+            {navigationItems.map(({ name, icon: Icon, route }) => (
               <div 
                 key={name}
-                onClick={() => handleTabClick(name)}
+                onClick={() => handleTabClick(name, route)} // Pass route to handler
                 className={`flex items-center space-x-2 cursor-pointer relative pb-1 transition-colors duration-200 ${
                   activeTab === name 
                     ? 'text-gray-900' 
@@ -129,10 +136,10 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
                   Navigation
                 </h3>
-                {navigationItems.map(({ name, icon: Icon }) => (
+                {navigationItems.map(({ name, icon: Icon, route }) => (
                   <div 
                     key={name}
-                    onClick={() => handleTabClick(name)}
+                    onClick={() => handleTabClick(name, route)} // Pass route to handler
                     className={`flex items-center space-x-3 cursor-pointer py-2 px-3 rounded-lg transition-colors duration-200 ${
                       activeTab === name 
                         ? 'bg-gray-100 text-gray-900' 
@@ -180,7 +187,7 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
       <LoginModal 
         isOpen={isLoginModalOpen} 
         onClose={handleCloseLoginModal}
-        onSwitchToRegister={handleSwitchToRegister} // Optional: if you want to add switching from login to register
+        onSwitchToRegister={handleSwitchToRegister}
       />
 
       {/* Register Modal */}
