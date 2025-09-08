@@ -3,6 +3,9 @@ import RootLayout from "./layouts/RootLayout"
 import Landing from "./Pages/Landing"
 import ShopPage from "./Pages/ShopPage"
 import ShopDetail from "./Pages/ShopDetail"
+import Cart from "./components/Cart"
+import FavouritePage from "./components/FavouritePage"
+
 
 
 function App() {
@@ -15,6 +18,9 @@ function App() {
       <Route index element={<Landing/>}/>
       <Route path="/shop" element={<ShopPage/>}/>
       <Route path='/shop/shopdetail' element={<ShopDetail/>}/>
+      <Route path="/cart" element={<Cart/>}/>
+      <Route path="/favourite" element={<FavouritePage/>}/>
+
 
     </Route>
 
