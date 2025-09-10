@@ -1,16 +1,10 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ChevronDown, ShoppingCart, Heart, Eye, Menu, X } from "lucide-react";
-import Apple from "../assets/images/Apple.png";
-import Apple1 from "../assets/images/Apple1.png";
-import HP from "../assets/images/HP.png";
-import iPhone from "../assets/images/iPhone.png";
-import SamsungS22 from "../assets/images/SamsungS22.png";
-import Lenovo from "../assets/images/Lenovo.png";
-import Lens from "../assets/images/Lens.png";
-import SamsungUltra from "../assets/images/SamsungUltra.png";
-import iPad from "../assets/images/iPad.png";
+import { products, categories, brands } from "../utils/productData"; 
 
 const ShopPage = () => {
+  const navigate = useNavigate();
   const [openSections, setOpenSections] = useState({
     categories: true,
     brand: true,
@@ -29,91 +23,11 @@ const ShopPage = () => {
     setIsMobileSideMenuOpen(!isMobileSideMenuOpen);
   };
 
-  const products = [
-    {
-      id: 1,
-      name: 'Apple MacBook Pro 2019 | 16"',
-      image: Apple,
-      specs: "RAM 16G GB | Memory 512 GB | Touch bar Five finger (English)",
-      price: "$740.99",
-      brand: "Apple",
-    },
-    {
-      id: 2,
-      name: 'Apple MacBook Pro 2020 | 13" Touch Bar',
-      image: Apple1,
-      specs: "RAM 16G GB | Memory 512 GB | Keyboard layout Eng (English)",
-      price: "$949.99",
-      brand: "Apple",
-    },
-    {
-      id: 3,
-      name: 'HP EliteBook 840 G5 | i5-8350U | 14"',
-      image: HP,
-      specs:
-        "8 GB | 128 GB SSD | Backlit keyboard | Webcam | Win 11 Pro | silver | SE",
-      price: "$549.99",
-      brand: "HP",
-    },
-    {
-      id: 4,
-      name: "iPhone 15",
-      image: iPhone,
-      specs: "128 GB | Dual SIM | blue | Unlocked",
-      price: "$449.99",
-      brand: "Apple",
-    },
-    {
-      id: 5,
-      name: "Samsung Galaxy S22 Ultra 5G",
-      image: SamsungS22,
-      specs: "8GB | 128 GB | Dual-SIM | Phantom Black",
-      price: "$449.99",
-      brand: "Samsung",
-    },
-    {
-      id: 6,
-      name: 'Lenovo Thinkpad T14 G1 | 14"',
-      image: Lenovo,
-      specs: "16 GB | 512 GB SSD | Backlit keyboard | FP | Win 11 Home | NO",
-      price: "$649.99",
-      brand: "Lenovo",
-    },
-     {
-      id: 7,
-      name: 'Lenovo Thinkpad T14 G1 | i7-10610U | 14"',
-      image: Lens   ,
-      specs: "16 GB | 512 GB SSD | Backlit keyboard | FP | Win 11 Home | NO",
-      price: "$649.99",
-      brand: "Lenovo",
-    },
-    {
-      id: 8,
-      name: 'Lenovo Thinkpad T14 G1 | i7-10610U | 14"',
-      image: SamsungUltra,
-      specs: "16 GB | 512 GB SSD | Backlit keyboard | FP | Win 11 Home | NO",
-      price: "$649.99",
-      brand: "Lenovo",
-    },
-    {
-      id: 9,
-      name: 'Lenovo Thinkpad T14 G1 | i7-10610U | 14"',
-      image: iPad,
-      specs: "16 GB | 512 GB SSD | Backlit keyboard | FP | Win 11 Home | NO",
-      price: "$649.99",
-      brand: "Lenovo",
-    },
-
-  ];
-
-  const categories = [
-    { name: "Laptops", count: 4 },
-    { name: "Phones", count: 3 },
-    { name: "Cameras", count: null },
-    { name: "Watches", count: 3 },
-  ];
-
-  const brands = ["Apple", "Samsung", "Lenovo", "Sony"];
+  // Function to handle product card click using slug
+  const handleProductClick = (product) => {
+    // Navigate to detail page with product slug
+    navigate(`/shop/${product.slug}`);
+  };
 
   const SidebarContent = () => (
     <>
@@ -140,7 +54,7 @@ const ShopPage = () => {
                 className="flex justify-between text-sm text-gray-600 hover:text-blue-600 cursor-pointer"
               >
                 <span>{category.name}</span>
-                {category.count && <span>({category.count})</span>}
+                {category.count > 0 && <span>({category.count})</span>}
               </div>
             ))}
           </div>
@@ -278,8 +192,9 @@ const ShopPage = () => {
               {products.map((product) => (
                 <div
                   key={product.id}
-                  className="rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  className="rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
                   style={{ backgroundColor: "#F9FBFC" }}
+                  onClick={() => handleProductClick(product)}
                 >
                   {/* Product Image */}
                   <div className="relative bg-white rounded-t-lg p-4 h-40 sm:h-48 flex items-center justify-center overflow-hidden">
@@ -307,13 +222,31 @@ const ShopPage = () => {
                         {product.price}
                       </span>
                       <div className="flex space-x-1 sm:space-x-2">
-                        <button className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                        <button 
+                          className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle add to cart
+                          }}
+                        >
                           <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
-                        <button className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                        <button 
+                          className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle wishlist
+                          }}
+                        >
                           <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
-                        <button className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
+                        <button 
+                          className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Handle quick view
+                          }}
+                        >
                           <Eye className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                       </div>
