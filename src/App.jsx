@@ -6,7 +6,10 @@ import ShopPage from "./Pages/ShopPage";
 import Cart from "./components/Cart";
 import FavouritePage from "./components/FavouritePage";
 import ProductDetailPage from "./Pages/ProductDetailPage";
-import CheckoutPage from "./components/cCheckOutPage";
+
+import OrderHistory from "./components/OrderHistory";
+import CheckoutPage from "./components/CheckOutPage";
+import OrderDetail from "./components/OrderDetails";
 
 function App() {
   return (
@@ -19,7 +22,9 @@ function App() {
           <Route path="/shop/:productSlug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/favourite" element={<FavouritePage />} />
-          <Route path="/checkout" element={<CheckoutPage/>} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-history" element={<OrderHistory />} />
+          <Route path="/order-detail" element={<OrderDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>
