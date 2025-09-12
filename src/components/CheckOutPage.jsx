@@ -1,6 +1,7 @@
 
 
 import React, { useState } from 'react';
+import Apple from "../assets/images/Apple.png";
 
 const CheckoutPage = () => {
   const [selectedPayment, setSelectedPayment] = useState('paypal');
@@ -108,7 +109,7 @@ const CheckoutPage = () => {
               <div className="flex items-start space-x-4 mb-6">
                 <div className="relative flex-shrink-0">
                   <img
-                    src="/path/to/your/macbook-image.jpg"
+                    src={Apple}
                     alt="Apple MacBook Pro"
                     className="w-16 h-12 object-cover rounded"
                   />
