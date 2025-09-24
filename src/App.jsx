@@ -24,7 +24,7 @@ function App() {
           <Route path="/favourite" element={<FavouritePage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/order-history" element={<OrderHistory />} />
-          <Route path="/order-detail" element={<OrderDetail />} />
+          <Route path="/order-detail/:orderId" element={<OrderDetail />} />
         </Route>
       </Routes>
     </BrowserRouter>

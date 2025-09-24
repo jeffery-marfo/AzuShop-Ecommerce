@@ -1,37 +1,16 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import MacbookPro from "../assets/images/MacbookPro.png";
+import { useStore } from "../context/StoreContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
+import { useNavigate, Link } from "react-router-dom";
 
 function Cart() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: 'Apple MacBook Pro 2019 | 16"',
-      brand: "Apple",
-      price: 749.99,
-      quantity: 1,
-      image: MacbookPro,
-    },
-  ]);
-
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity < 1) return;
-    setCartItems((items) =>
-      items.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
-      )
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((items) => items.filter((item) => item.id !== id));
-  };
-
+  const { cartItems, updateCartQuantity, removeFromCart, cartTotal, addToCart } = useStore();
+  const { addToast } = useToast();
+  const navigate = useNavigate();
   const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const totalPrice = cartTotal;
 
   return (
     <div className="min-h-screen bg-white">
@@ -51,9 +30,9 @@ function Cart() {
       <div className="bg-white py-4">
         <div className="flex justify-center max-w-6xl mx-auto px-4">
           <div className="flex items-center text-sm text-gray-600">
-            <a href="#" className="hover:text-blue-600 transition-colors">
+            <Link to="/" className="hover:text-blue-600 transition-colors">
               Home
-            </a>
+            </Link>
             <span className="mx-2">/</span>
             <span className="text-gray-900">Cart</span>
           </div>
@@ -94,7 +73,20 @@ function Cart() {
                       </span>
                     </p>
                     <button
-                      onClick={() => removeItem(item.id)}
+                      onClick={() => {
+                        const removed = item;
+                        removeFromCart(item.id);
+                        addToast({
+                          title: 'Removed from cart',
+                          description: removed.name,
+                          action: {
+                            label: 'Undo',
+                            onClick: () => {
+                              addToCart(removed, removed.quantity);
+                            }
+                          }
+                        });
+                      }}
                       className="text-red-600 hover:text-red-700 text-sm font-medium mt-2"
                     >
                       Remove
@@ -113,7 +105,7 @@ function Cart() {
                     <select
                       value={item.quantity}
                       onChange={(e) =>
-                        updateQuantity(item.id, parseInt(e.target.value))
+                        updateCartQuantity(item.id, parseInt(e.target.value))
                       }
                       className="appearance-none bg-gray-50 border border-gray-300 rounded px-4 py-2 pr-8 text-center min-w-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
@@ -195,7 +187,20 @@ function Cart() {
                         Total: ${(item.price * item.quantity).toFixed(2)}
                       </div>
                       <button
-                        onClick={() => removeItem(item.id)}
+                      onClick={() => {
+                        const removed = item;
+                        removeFromCart(item.id);
+                        addToast({
+                          title: 'Removed from cart',
+                          description: removed.name,
+                          action: {
+                            label: 'Undo',
+                            onClick: () => {
+                              addToCart(removed, removed.quantity);
+                            }
+                          }
+                        });
+                      }}
                         className="text-red-600 hover:text-red-700 text-sm font-medium"
                       >
                         Remove
@@ -229,7 +234,16 @@ function Cart() {
             </div>
 
             <div className="mt-4 sm:mt-6">
-              <button className="w-full bg-blue-600 text-white py-3 sm:py-4 px-6 sm:px-8 rounded-lg font-medium text-base sm:text-lg hover:bg-blue-700 transition-colors">
+              <button
+                onClick={() => {
+                  if (totalItems === 0) {
+                    addToast({ title: 'Your cart is empty', variant: 'error' });
+                    return;
+                  }
+                  navigate('/checkout');
+                }}
+                className="w-full bg-blue-600 text-white py-3 sm:py-4 px-6 sm:px-8 rounded-lg font-medium text-base sm:text-lg hover:bg-blue-700 transition-colors"
+              >
                 Proceed to checkout
               </button>
             </div>

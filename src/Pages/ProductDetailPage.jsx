@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronDown, ShoppingCart, Heart, Eye, ArrowLeft } from 'lucide-react';
 import { products, getProductBySlug, getRelatedProducts } from '../utils/productData';
+import { useStore } from '../context/StoreContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
 
 const ProductDetailPage = () => {
   const { productSlug } = useParams(); 
   const navigate = useNavigate();
+  const { addToCart, toggleFavourite, isFavourite } = useStore();
+  const { addToast } = useToast();
   
   const [product, setProduct] = useState(null);
   const [activeTab, setActiveTab] = useState('Related Product');
@@ -122,8 +126,8 @@ const ProductDetailPage = () => {
 
       {/* Breadcrumb */}
       <div className="text-sm text-gray-600 mb-4">
-        <span>Home</span> <span>|</span> 
-        <span className="lowercase">{product.category || 'product'}</span> <span>|</span> 
+        <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link> <span>|</span> 
+        <Link to="/shop" className="hover:text-blue-600 transition-colors">{product.category || 'Product'}</Link> <span>|</span> 
         <span className="font-medium">{product.name}</span>
       </div>
 
@@ -208,11 +212,24 @@ const ProductDetailPage = () => {
                   : 'bg-gray-400 text-white cursor-not-allowed'
               }`}
               disabled={!product.inStock}
+              onClick={() => {
+                if (!product.inStock) return;
+                addToCart(product, quantity);
+                addToast({ title: 'Added to cart', description: product.name, variant: 'success' });
+                navigate('/cart');
+              }}
             >
               {product.inStock ? 'Add to cart' : 'Out of Stock'}
             </button>
-            <button className="p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors">
-              <Heart className="w-5 h-5" />
+            <button 
+              className={`p-2 border rounded transition-colors ${isFavourite(product.id) ? 'bg-red-100 border-red-300' : 'border-gray-300 hover:bg-gray-50'}`}
+              onClick={() => {
+                const removing = isFavourite(product.id);
+                toggleFavourite(product);
+                addToast({ title: removing ? 'Removed from favourites' : 'Added to favourites', description: product.name });
+              }}
+            >
+              <Heart className={`w-5 h-5 ${isFavourite(product.id) ? 'fill-current text-red-600' : ''}`} />
             </button>
           </div>
         </div>
@@ -277,15 +294,24 @@ const ProductDetailPage = () => {
                       <div className="flex space-x-1 sm:space-x-2">
                         <button 
                           className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            addToCart(relatedProduct, 1);
+                            addToast({ title: 'Added to cart', description: relatedProduct.name, variant: 'success' });
+                            navigate('/cart');
+                          }}
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                         <button 
-                          className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
-                          onClick={(e) => e.stopPropagation()}
+                          className={`p-1.5 sm:p-2 border rounded transition-colors ${isFavourite(relatedProduct.id) ? 'bg-red-100 border-red-300' : 'border-gray-300 hover:bg-gray-50'}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavourite(relatedProduct);
+                            addToast({ title: isFavourite(relatedProduct.id) ? 'Removed from favourites' : 'Added to favourites', description: relatedProduct.name });
+                          }}
                         >
-                          <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isFavourite(relatedProduct.id) ? 'fill-current text-red-600' : ''}`} />
                         </button>
                         <button 
                           className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"

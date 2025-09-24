@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import { ShoppingCart, Heart, Eye, X } from 'lucide-react';
 import MacbookPro from '../assets/images/MacbookPro.png';
+import { useStore } from '../context/StoreContext.jsx';
+import { useNavigate, Link } from 'react-router-dom';
+import { useToast } from '../context/ToastContext.jsx';
 
 function FavouritePage() {
-  const [favouriteItems, setFavouriteItems] = useState([
-    {
-      id: 1,
-      name: 'Apple MacBook Pro 2019 | 16"',
-      image: MacbookPro,
-      specs: "RAM 16.0 GB | Memory 512 GB | Keyboard layout Eng (English)",
-      price: "$749.99",
-      brand: "Apple",
-    }
-  ]);
-
-  const removeFromFavourites = (id) => {
-    setFavouriteItems(items => items.filter(item => item.id !== id));
+  const navigate = useNavigate();
+  const { favourites: favouriteItems, toggleFavourite, addToCart } = useStore();
+  const { addToast } = useToast();
+  const [showConfirmAddAll, setShowConfirmAddAll] = useState(false);
+  const removeFromFavourites = (id) => toggleFavourite({ id });
+  const moveToCart = (product) => {
+    addToCart(product, 1);
+    toggleFavourite(product);
+    addToast({ title: 'Moved to cart', description: product.name, variant: 'success' });
+    navigate('/cart');
+  };
+  const addAllToCart = () => {
+    if (favouriteItems.length === 0) return;
+    favouriteItems.forEach((p) => addToCart(p, 1));
+    addToast({ title: 'All favourites added to cart', variant: 'success' });
+    navigate('/cart');
   };
 
   return (
@@ -36,7 +42,7 @@ function FavouritePage() {
       <div className="bg-white py-4">
         <div className="max-w-6xl mx-auto px-4">
           <div className="flex items-center justify-center text-sm text-gray-600">
-            <a href="#" className="hover:text-blue-600 transition-colors">Home</a>
+            <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
             <span className="mx-2">/</span>
             <span className="text-gray-900">Favourite</span>
           </div>
@@ -95,13 +101,24 @@ function FavouritePage() {
                       <button 
                         className="p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors" 
                         title="Add to cart"
+                        onClick={() => moveToCart(product)}
                       >
                         <ShoppingCart className="w-4 h-4" />
                       </button>
                       <button 
                         className="p-2 bg-red-100 border border-red-300 rounded hover:bg-red-200 transition-colors text-red-600"
                         title="Remove from favourites"
-                        onClick={() => removeFromFavourites(product.id)}
+                        onClick={() => {
+                          removeFromFavourites(product.id);
+                          addToast({
+                            title: 'Removed from favourites',
+                            description: product.name,
+                            action: {
+                              label: 'Undo',
+                              onClick: () => toggleFavourite(product)
+                            }
+                          });
+                        }}
                       >
                         <Heart className="w-4 h-4 fill-current" />
                       </button>
@@ -127,6 +144,7 @@ function FavouritePage() {
                       <button 
                         className="flex items-center justify-center py-2 px-3 border border-gray-300 rounded hover:bg-gray-50 transition-colors text-sm"
                         title="Add to cart"
+                        onClick={() => moveToCart(product)}
                       >
                         <ShoppingCart className="w-4 h-4 mr-1" />
                         <span className="text-xs">Add</span>
@@ -134,7 +152,17 @@ function FavouritePage() {
                       <button 
                         className="flex items-center justify-center py-2 px-3 bg-red-100 border border-red-300 rounded hover:bg-red-200 transition-colors text-red-600 text-sm"
                         title="Remove from favourites"
-                        onClick={() => removeFromFavourites(product.id)}
+                        onClick={() => {
+                          removeFromFavourites(product.id);
+                          addToast({
+                            title: 'Removed from favourites',
+                            description: product.name,
+                            action: {
+                              label: 'Undo',
+                              onClick: () => toggleFavourite(product)
+                            }
+                          });
+                        }}
                       >
                         <Heart className="w-4 h-4 fill-current mr-1" />
                         <span className="text-xs">Remove</span>
@@ -170,12 +198,37 @@ function FavouritePage() {
         {favouriteItems.length > 0 && (
           <div className="mt-6 sm:mt-8 text-center">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-              <button className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium">
+              <button onClick={() => setShowConfirmAddAll(true)} className="w-full sm:w-auto bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium">
                 Add All to Cart
               </button>
-              <button className="w-full sm:w-auto border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
+              <button onClick={() => navigate('/shop')} className="w-full sm:w-auto border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium">
                 Continue Shopping
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Confirm Add All Modal */}
+        {showConfirmAddAll && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmAddAll(false)} />
+            <div className="relative bg-white rounded-lg shadow-lg w-[90%] max-w-sm p-5 z-10">
+              <h3 className="text-base font-semibold text-gray-900 mb-2">Add all favourites to cart?</h3>
+              <p className="text-sm text-gray-600 mb-4">This will add {favouriteItems.length} item{favouriteItems.length === 1 ? '' : 's'} to your cart.</p>
+              <div className="flex gap-2 justify-end">
+                <button
+                  className="px-4 py-2 text-sm rounded border border-gray-300 text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowConfirmAddAll(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 text-sm rounded bg-blue-600 text-white hover:bg-blue-700"
+                  onClick={() => { setShowConfirmAddAll(false); addAllToCart(); }}
+                >
+                  Yes, add all
+                </button>
+              </div>
             </div>
           </div>
         )}

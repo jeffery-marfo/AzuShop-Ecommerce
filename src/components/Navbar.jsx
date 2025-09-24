@@ -207,6 +207,7 @@ import { Home, ShoppingBag, ShoppingCart, Heart, LogIn, UserPlus, Menu, X, Chevr
 import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
 import { logoutUser } from '../services/auth'; // Import the logout function
+import { useStore } from '../context/StoreContext.jsx';
 
 function Navbar({ initialTab = 'Home', onTabChange }) {
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -220,6 +221,7 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   
   const navigate = useNavigate();
+  const { cartCount, favouritesCount } = useStore();
 
   // Check for existing user session on component mount
   useEffect(() => {
@@ -229,6 +231,7 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
     if (storedUser && authToken) {
       try {
         const userData = JSON.parse(storedUser);
+        console.log('👤 Found stored user on mount:', userData);
         setUser(userData);
         setIsLoggedIn(true);
       } catch (error) {
@@ -237,6 +240,8 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
       }
+    } else {
+      console.log('👤 No stored user session found');
     }
   }, []);
 
@@ -305,9 +310,22 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
 
   // Handle successful login
   const handleLoginSuccess = (userData, token) => {
-    setUser(userData);
+    // Get the processed user data from localStorage (which has the proper formatting)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const processedUserData = JSON.parse(storedUser);
+        setUser(processedUserData);
+        console.log('👤 User set in navbar from localStorage:', processedUserData);
+      } catch (error) {
+        console.error('Error parsing stored user data:', error);
+        setUser(userData);
+      }
+    } else {
+      console.log('👤 No stored user data, using passed userData:', userData);
+      setUser(userData);
+    }
     setIsLoggedIn(true);
-    // Note: localStorage is already handled by your auth service
     setIsLoginModalOpen(false);
   };
 
@@ -386,6 +404,12 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
               >
                 <Icon size={20} />
                 <span className="text-sm font-medium">{name}</span>
+                {(name === 'Cart' && cartCount > 0) && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs bg-blue-600 text-white">{cartCount}</span>
+                )}
+                {(name === 'Favourite' && favouritesCount > 0) && (
+                  <span className="ml-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs bg-red-600 text-white">{favouritesCount}</span>
+                )}
                 {activeTab === name && (
                   <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900 rounded-full transition-all duration-300"></div>
                 )}
@@ -449,14 +473,44 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            onClick={toggleMobileMenu}
-            className="md:hidden flex items-center justify-center w-10 h-10 text-gray-700 hover:text-gray-900 transition-colors duration-200"
-            aria-label="Toggle mobile menu"
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Mobile Quick Actions + Menu Button */}
+          <div className="md:hidden flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => handleTabClick('Favourite', '/favourite')}
+                className="flex items-center justify-center w-10 h-10 text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                aria-label="Go to favourites"
+              >
+                <Heart size={22} />
+              </button>
+              {favouritesCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] bg-red-600 text-white">
+                  {favouritesCount}
+                </span>
+              )}
+            </div>
+            <div className="relative">
+              <button
+                onClick={() => handleTabClick('Cart', '/cart')}
+                className="flex items-center justify-center w-10 h-10 text-gray-700 hover:text-gray-900 transition-colors duration-200"
+                aria-label="Go to cart"
+              >
+                <ShoppingCart size={22} />
+              </button>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full text-[10px] bg-blue-600 text-white">
+                  {cartCount}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={toggleMobileMenu}
+              className="flex items-center justify-center w-10 h-10 text-gray-700 hover:text-gray-900 transition-colors duration-200"
+              aria-label="Toggle mobile menu"
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu Overlay */}
@@ -480,6 +534,12 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
                   >
                     <Icon size={20} />
                     <span className="text-base font-medium">{name}</span>
+                    {(name === 'Cart' && cartCount > 0) && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs bg-blue-600 text-white">{cartCount}</span>
+                    )}
+                    {(name === 'Favourite' && favouritesCount > 0) && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full text-xs bg-red-600 text-white">{favouritesCount}</span>
+                    )}
                   </div>
                 ))}
               </div>

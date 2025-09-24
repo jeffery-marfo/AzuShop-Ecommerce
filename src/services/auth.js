@@ -52,24 +52,55 @@ export const registerUser = async (userData) => {
     
     console.log('📤 Sending payload to /users:', payload);
     
-    // Using /users endpoint as shown in your Postman
-    const response = await apiClient.post('/users', payload);
+    // Retry logic for Render.com cold starts
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
     
-    console.log('✅ Registration successful:', response.data);
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`🔄 Attempt ${retryCount + 1} of ${maxRetries + 1}...`);
+        response = await apiClient.post('/users', payload);
+        console.log('✅ Registration successful:', response.data);
+        console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+        break;
+      } catch (error) {
+        if (error.code === 'ECONNABORTED' && retryCount < maxRetries) {
+          console.log(`⏳ Timeout on attempt ${retryCount + 1}, retrying...`);
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          continue;
+        }
+        throw error;
+      }
+    }
     
     // Store token and user info if registration returns them
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       console.log('💾 Token stored');
+    } else {
+      // If no token, create a mock token for session management
+      const mockToken = 'mock-token-' + Date.now();
+      localStorage.setItem('token', mockToken);
+      console.log('💾 Mock token stored for session');
     }
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      console.log('👤 User data stored');
-    }
+    
+    // Store user data (even if no token, we still want to store user info)
+    const processedUserData = {
+      ...response.data,
+      fullName: response.data.fullName || response.data.username || `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || 'User',
+      username: response.data.username || response.data.email || 'User'
+    };
+    localStorage.setItem('user', JSON.stringify(processedUserData));
+    console.log('👤 User data stored:', processedUserData);
     
     return {
       success: true,
-      data: response.data,
+      data: {
+        ...response.data,
+        user: processedUserData
+      },
       message: 'Registration successful!'
     };
   } catch (error) {
@@ -80,10 +111,12 @@ export const registerUser = async (userData) => {
     
     let errorMessage = 'Registration failed. Please try again.';
     
-    if (error.code === 'ERR_NETWORK') {
-      errorMessage = 'Cannot connect to server. Please check if the backend is running on port 5000.';
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. The server is taking too long to respond. Please try again.';
+    } else if (error.code === 'ERR_NETWORK') {
+      errorMessage = 'Cannot connect to server. Please check your internet connection and try again.';
     } else if (error.code === 'ERR_CONNECTION_REFUSED') {
-      errorMessage = 'Connection refused. Make sure your backend server is running.';
+      errorMessage = 'Connection refused. Please try again later.';
     } else if (error.response?.status === 400) {
       errorMessage = error.response.data?.message || 'Invalid registration data.';
     } else if (error.response?.status === 409) {
@@ -112,24 +145,55 @@ export const loginUser = async (userData) => {
     
     console.log('📤 Sending login payload to /users/auth');
     
-    // Using /users/auth endpoint as shown in your Postman
-    const response = await apiClient.post('/users/auth', payload);
+    // Retry logic for Render.com cold starts
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
     
-    console.log('✅ Login successful:', response.data);
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`🔄 Attempt ${retryCount + 1} of ${maxRetries + 1}...`);
+        response = await apiClient.post('/users/auth', payload);
+        console.log('✅ Login successful:', response.data);
+        console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+        break;
+      } catch (error) {
+        if (error.code === 'ECONNABORTED' && retryCount < maxRetries) {
+          console.log(`⏳ Timeout on attempt ${retryCount + 1}, retrying...`);
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          continue;
+        }
+        throw error;
+      }
+    }
     
     // Store token and user info
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       console.log('💾 Token stored');
+    } else {
+      // If no token, create a mock token for session management
+      const mockToken = 'mock-token-' + Date.now();
+      localStorage.setItem('token', mockToken);
+      console.log('💾 Mock token stored for session');
     }
-    if (response.data.user) {
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      console.log('👤 User data stored');
-    }
+    
+    // Store user data (even if no token, we still want to store user info)
+    const processedUserData = {
+      ...response.data,
+      fullName: response.data.fullName || response.data.username || `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || 'User',
+      username: response.data.username || response.data.email || 'User'
+    };
+    localStorage.setItem('user', JSON.stringify(processedUserData));
+    console.log('👤 User data stored:', processedUserData);
     
     return {
       success: true,
-      data: response.data,
+      data: {
+        ...response.data,
+        user: processedUserData
+      },
       message: 'Login successful!'
     };
   } catch (error) {
@@ -140,10 +204,12 @@ export const loginUser = async (userData) => {
     
     let errorMessage = 'Login failed. Please check your credentials.';
     
-    if (error.code === 'ERR_NETWORK') {
-      errorMessage = 'Cannot connect to server. Please check if the backend is running on port 5000.';
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. The server is taking too long to respond. Please try again.';
+    } else if (error.code === 'ERR_NETWORK') {
+      errorMessage = 'Cannot connect to server. Please check your internet connection and try again.';
     } else if (error.code === 'ERR_CONNECTION_REFUSED') {
-      errorMessage = 'Connection refused. Make sure your backend server is running.';
+      errorMessage = 'Connection refused. Please try again later.';
     } else if (error.response?.status === 401) {
       errorMessage = 'Invalid email or password.';
     } else if (error.response?.status === 404) {

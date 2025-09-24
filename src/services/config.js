@@ -56,14 +56,28 @@
 
 import axios from 'axios';
 
-// When using Vite proxy, we don't need the full URL
-// The proxy will handle forwarding /api requests to localhost:5000
+// Determine the base URL based on environment
+const getBaseURL = () => {
+  // Check if a custom API URL is provided via environment variable
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // In development, use the Vite proxy to avoid CORS issues
+  if (import.meta.env.DEV) {
+    return '/api';
+  }
+  
+  // In production, use the live backend URL directly
+  return 'https://azushop-backend.onrender.com/api';
+};
+
 export const apiClient = axios.create({
-  baseURL: '/api', // This will use the Vite proxy
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 30 second timeout for Render.com
 });
 
 apiClient.interceptors.request.use(
@@ -83,7 +97,7 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.code === 'ERR_NETWORK') {
-      console.error('Network Error: Please check if the backend server is running on port 5000');
+      console.error('Network Error: Please check if the backend server is running');
     }
     
     // Handle authentication errors

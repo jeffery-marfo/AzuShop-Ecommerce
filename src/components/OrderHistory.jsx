@@ -1,8 +1,12 @@
 
 import { ChevronLeft, Eye } from "lucide-react";
 import Apple from "../assets/images/Apple.png";
+import { useOrders } from "../context/OrdersContext.jsx";
+import { useNavigate } from "react-router-dom";
 
 function OrderHistory() {
+  const { orders } = useOrders();
+  const navigate = useNavigate();
   return (
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
@@ -37,94 +41,103 @@ function OrderHistory() {
             </div>
           </div>
 
-          {/* Table Row */}
-          <div className="px-4 py-4 border-b border-gray-100">
-            <div className="grid grid-cols-6 gap-4 items-center">
-              {/* Image */}
-              <div>
-                <img 
-                  src={Apple} 
-                  alt="Apple MacBook Pro" 
-                  className="w-16 h-12 object-cover rounded"
-                />
-              </div>
+          {orders.length === 0 ? (
+            <div className="px-4 py-6 text-sm text-gray-600">No orders yet.</div>
+          ) : (
+            orders.map((order) => (
+              <div key={order.id} className="px-4 py-4 border-b border-gray-100">
+                <div className="grid grid-cols-6 gap-4 items-center">
+                  {/* Image (first item) */}
+                  <div>
+                    <img 
+                      src={order.items[0]?.image || Apple}
+                      alt={order.items[0]?.name || 'Order item'} 
+                      className="w-16 h-12 object-cover rounded"
+                    />
+                  </div>
 
-              {/* ID */}
-              <div className="text-sm text-gray-700 break-all">
-                6537b4b8b1be49cc3f658
-              </div>
+                  {/* ID */}
+                  <div className="text-sm text-gray-700 break-all">
+                    {order.id}
+                  </div>
 
-              {/* Date */}
-              <div className="text-sm text-gray-700">
-                2025-03-1
-              </div>
+                  {/* Date */}
+                  <div className="text-sm text-gray-700">
+                    {new Date(order.createdAt).toLocaleDateString()}
+                  </div>
 
-              {/* Total */}
-              <div className="text-sm text-gray-700">
-                $ 1250.00
-              </div>
+                  {/* Total */}
+                  <div className="text-sm text-gray-700">
+                    ${order.totals.grandTotal.toFixed(2)}
+                  </div>
 
-              {/* Paid Status */}
-              <div>
-                <span className="inline-flex items-center px-4.5 py-2.5 rounded-sm text-xs font-medium bg-[#77C053] text-white">
-                  Completed
-                </span>
-              </div>
+                  {/* Paid Status */}
+                  <div>
+                    <span className="inline-flex items-center px-4.5 py-2.5 rounded-sm text-xs font-medium bg-[#77C053] text-white">
+                      {order.status.paid ? 'Completed' : 'Unpaid'}
+                    </span>
+                  </div>
 
-              {/* Delivered Status */}
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center px-4.5 py-2.5 rounded-sm text-xs font-medium bg-[#F7E9EA] text-black">
-                  Pending
-                </span>
-                <button className="bg-[#003087] hover:bg-blue-700 text-white p-2 rounded-sm ml-2">
-                  <Eye className="w-4 h-4" />
-                </button>
+                  {/* Delivered Status */}
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center px-4.5 py-2.5 rounded-sm text-xs font-medium bg-[#F7E9EA] text-black">
+                      {order.status.delivered ? 'Delivered' : 'Pending'}
+                    </span>
+                    <button className="bg-[#003087] hover:bg-blue-700 text-white p-2 rounded-sm ml-2" onClick={() => navigate(`/order-detail/${order.id}`)}>
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
 
         {/* Mobile/Tablet Card Layout */}
         <div className="md:hidden space-y-4">
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-start space-x-4 mb-4">
-              <img 
-                src={Apple} 
-                alt="Apple MacBook Pro" 
-                className="w-16 h-12 sm:w-20 sm:h-16 object-cover rounded flex-shrink-0"
-              />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs text-gray-500 mb-1">Order ID</div>
-                <div className="text-sm text-gray-700 break-all mb-2">
-                  6537b4b8b1be49cc3f658
+          {orders.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-4">No orders yet.</div>
+          ) : (
+            orders.map((order) => (
+              <div key={order.id} className="bg-white rounded-lg shadow-sm p-4">
+                <div className="flex items-start space-x-4 mb-4">
+                  <img 
+                    src={order.items[0]?.image || Apple}
+                    alt={order.items[0]?.name || 'Order item'} 
+                    className="w-16 h-12 sm:w-20 sm:h-16 object-cover rounded flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-gray-500 mb-1">Order ID</div>
+                    <div className="text-sm text-gray-700 break-all mb-2">{order.id}</div>
+                    <div className="text-xs text-gray-500 mb-1">Date</div>
+                    <div className="text-sm text-gray-700 mb-2">{new Date(order.createdAt).toLocaleDateString()}</div>
+                    <div className="text-xs text-gray-500 mb-1">Total</div>
+                    <div className="text-sm font-semibold text-gray-700">${order.totals.grandTotal.toFixed(2)}</div>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-500 mb-1">Date</div>
-                <div className="text-sm text-gray-700 mb-2">2025-03-1</div>
-                <div className="text-xs text-gray-500 mb-1">Total</div>
-                <div className="text-sm font-semibold text-gray-700">$ 1250.00</div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+                  <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 mr-2">Paid:</span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium bg-[#77C053] text-white">
+                        {order.status.paid ? 'Completed' : 'Unpaid'}
+                      </span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-500 mr-2">Delivered:</span>
+                      <span className="inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium bg-[#F7E9EA] text-black">
+                        {order.status.delivered ? 'Delivered' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+                  <button className="bg-[#003087] hover:bg-blue-700 text-white p-2 rounded-sm self-start sm:self-auto" onClick={() => navigate(`/order-detail/${order.id}`)}>
+                    <Eye className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-              <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                <div className="flex items-center">
-                  <span className="text-xs text-gray-500 mr-2">Paid:</span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium bg-[#77C053] text-white">
-                    Completed
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <span className="text-xs text-gray-500 mr-2">Delivered:</span>
-                  <span className="inline-flex items-center px-3 py-1 rounded-sm text-xs font-medium bg-[#F7E9EA] text-black">
-                    Pending
-                  </span>
-                </div>
-              </div>
-              <button className="bg-[#003087] hover:bg-blue-700 text-white p-2 rounded-sm self-start sm:self-auto">
-                <Eye className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       </div>
     </div>

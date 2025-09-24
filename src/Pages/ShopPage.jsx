@@ -1,10 +1,14 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { ChevronDown, ShoppingCart, Heart, Eye, Menu, X } from "lucide-react";
 import { products, categories, brands } from "../utils/productData"; 
+import { useStore } from "../context/StoreContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 
 const ShopPage = () => {
   const navigate = useNavigate();
+  const { addToCart, toggleFavourite, isFavourite } = useStore();
+  const { addToast } = useToast();
   const [openSections, setOpenSections] = useState({
     categories: true,
     brand: true,
@@ -139,8 +143,9 @@ const ShopPage = () => {
       {/* Breadcrumb */}
       <div className="bg-white py-3 px-4">
         <div className="max-w-7xl mx-auto flex justify-center">
-          <span className="text-gray-600">Home/ </span>
-          <span className="text-gray-900 font-medium">shop</span>
+          <Link to="/" className="text-gray-600 hover:text-blue-600 transition-colors">Home</Link>
+          <span className="text-gray-600"> / </span>
+          <span className="text-gray-900 font-medium">Shop</span>
         </div>
       </div>
 
@@ -226,19 +231,22 @@ const ShopPage = () => {
                           className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Handle add to cart
+                          addToCart(product, 1);
+                          addToast({ title: 'Added to cart', description: product.name, variant: 'success' });
+                          navigate('/cart');
                           }}
                         >
                           <ShoppingCart className="w-3 h-3 sm:w-4 sm:h-4" />
                         </button>
                         <button 
-                          className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                        className={`p-1.5 sm:p-2 border rounded transition-colors ${isFavourite(product.id) ? 'bg-red-100 border-red-300' : 'border-gray-300 hover:bg-gray-50'}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            // Handle wishlist
+                          toggleFavourite(product);
+                          addToast({ title: isFavourite(product.id) ? 'Removed from favourites' : 'Added to favourites', description: product.name });
                           }}
                         >
-                          <Heart className="w-3 h-3 sm:w-4 sm:h-4" />
+                        <Heart className={`w-3 h-3 sm:w-4 sm:h-4 ${isFavourite(product.id) ? 'fill-current text-red-600' : ''}`} />
                         </button>
                         <button 
                           className="p-1.5 sm:p-2 border border-gray-300 rounded hover:bg-gray-50 transition-colors"

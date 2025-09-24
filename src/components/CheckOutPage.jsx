@@ -1,7 +1,11 @@
 
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Apple from "../assets/images/Apple.png";
+import { useStore } from '../context/StoreContext.jsx';
+import { useOrders } from '../context/OrdersContext.jsx';
+import { useToast } from '../context/ToastContext.jsx';
+import { useNavigate, Link } from 'react-router-dom';
 
 const CheckoutPage = () => {
   const [selectedPayment, setSelectedPayment] = useState('paypal');
@@ -11,6 +15,18 @@ const CheckoutPage = () => {
     postalCode: '',
     country: ''
   });
+  const navigate = useNavigate();
+  const { cartItems, cartTotal, clearCart } = useStore();
+  const { createOrder } = useOrders();
+  const { addToast } = useToast();
+
+  const totals = useMemo(() => {
+    const itemsTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const shipping = 0;
+    const tax = Math.round(itemsTotal * 0.02 * 100) / 100; // 2% simple tax
+    const grandTotal = Math.round((itemsTotal + shipping + tax) * 100) / 100;
+    return { itemsTotal, shipping, tax, grandTotal };
+  }, [cartItems]);
 
   const handleInputChange = (e) => {
     setFormData({
@@ -20,7 +36,23 @@ const CheckoutPage = () => {
   };
 
   const handleSubmit = () => {
-    alert('Order placed successfully!');
+    if (!cartItems.length) {
+      addToast({ title: 'Your cart is empty', variant: 'error' });
+      return;
+    }
+    if (!formData.address) {
+      addToast({ title: 'Address is required', variant: 'error' });
+      return;
+    }
+    const order = createOrder({
+      items: cartItems.map(i => ({ id: i.id, name: i.name, image: i.image, brand: i.brand, quantity: i.quantity, unitPrice: i.price, total: i.price * i.quantity, slug: i.slug })),
+      totals,
+      shippingAddress: formData,
+      paymentMethod: selectedPayment,
+    });
+    clearCart();
+    addToast({ title: 'Order placed', description: `Order #${order.id}`, variant: 'success' });
+    navigate(`/order-detail/${order.id}`);
   };
 
   return (
@@ -40,9 +72,11 @@ const CheckoutPage = () => {
       {/* Breadcrumb */}
       <div className="max-w-6xl mx-auto px-4 py-4 flex justify-center">
         <div className="text-sm text-gray-600">
-          <span>Home</span>
+          <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
           <span className="mx-2">/</span>
-          <span className="font-medium">Cart</span>
+          <Link to="/cart" className="hover:text-blue-600 transition-colors">Cart</Link>
+          <span className="mx-2">/</span>
+          <span className="font-medium">Checkout</span>
         </div>
       </div>
 
@@ -105,27 +139,32 @@ const CheckoutPage = () => {
             <h2 className="text-lg font-semibold text-gray-900 mb-6">Products</h2>
             
             <div className="bg-white rounded-lg p-6 shadow-sm">
-              {/* Product Item */}
-              <div className="flex items-start space-x-4 mb-6">
-                <div className="relative flex-shrink-0">
-                  <img
-                    src={Apple}
-                    alt="Apple MacBook Pro"
-                    className="w-16 h-12 object-cover rounded"
-                  />
-                  <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
-                    1
+              {cartItems.length === 0 ? (
+                <div className="text-sm text-gray-600">Your cart is empty.</div>
+              ) : (
+                cartItems.map((item) => (
+                  <div key={item.id} className="flex items-start space-x-4 mb-6 last:mb-0">
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-16 h-12 object-cover rounded"
+                      />
+                      <div className="absolute -top-2 -right-2 bg-gray-800 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                        {item.quantity}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-gray-900 text-sm">{item.name}</h3>
+                      <p className="text-xs text-gray-500 mt-1">{item.brand}</p>
+                      <p className="text-sm font-semibold text-gray-900 mt-1">${item.price.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="font-semibold text-gray-900">${(item.price * item.quantity).toFixed(2)}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-gray-900 text-sm">Apple MacBook Pro 2019 | 16"</h3>
-                  <p className="text-xs text-gray-500 mt-1">Space Gray, Apple</p>
-                  <p className="text-sm font-semibold text-gray-900 mt-1">$749.99</p>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="font-semibold text-gray-900">$749.99</p>
-                </div>
-              </div>
+                ))
+              )}
 
               {/* Divider Line */}
               <div className="border-t border-gray-200 mb-6"></div>
@@ -152,7 +191,7 @@ const CheckoutPage = () => {
               <div className="mb-6">
                 <div className="flex justify-between items-center">
                   <span className="font-semibold text-gray-900 text-sm">Total</span>
-                  <span className="font-semibold text-gray-900">$759.99</span>
+                  <span className="font-semibold text-gray-900">${totals.grandTotal.toFixed(2)}</span>
                 </div>
               </div>
 
