@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ChevronDown, ShoppingCart, Heart, Eye, Menu, X } from "lucide-react";
 import { products, categories, brands } from "../utils/productData"; 
@@ -15,6 +15,11 @@ const ShopPage = () => {
     price: true,
   });
   const [isMobileSideMenuOpen, setIsMobileSideMenuOpen] = useState(false);
+  
+  // Filter states
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [priceFilter, setPriceFilter] = useState('');
 
   const toggleSection = (section) => {
     setOpenSections((prev) => ({
@@ -26,6 +31,91 @@ const ShopPage = () => {
   const toggleMobileSideMenu = () => {
     setIsMobileSideMenuOpen(!isMobileSideMenuOpen);
   };
+
+  // Filter functions
+  const handleCategoryToggle = (category) => {
+    setSelectedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
+  };
+
+  const handleBrandToggle = (brand) => {
+    setSelectedBrands(prev => 
+      prev.includes(brand) 
+        ? prev.filter(b => b !== brand)
+        : [...prev, brand]
+    );
+  };
+
+  const handlePriceChange = (e) => {
+    setPriceFilter(e.target.value);
+  };
+
+  const resetFilters = () => {
+    setSelectedCategories([]);
+    setSelectedBrands([]);
+    setPriceFilter('');
+  };
+
+  // Filter products based on selected filters
+  const filteredProducts = useMemo(() => {
+    let filtered = [...products];
+
+    // Filter by categories
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter(product => 
+        selectedCategories.includes(product.category)
+      );
+    }
+
+    // Filter by brands
+    if (selectedBrands.length > 0) {
+      filtered = filtered.filter(product => 
+        selectedBrands.includes(product.brand)
+      );
+    }
+
+    // Filter by price
+    if (priceFilter) {
+      const maxPrice = parseFloat(priceFilter);
+      if (!isNaN(maxPrice)) {
+        filtered = filtered.filter(product => {
+          const productPrice = parseFloat(product.price.replace('$', '').replace(',', ''));
+          return productPrice <= maxPrice;
+        });
+      }
+    }
+
+    return filtered;
+  }, [selectedCategories, selectedBrands, priceFilter]);
+
+  // Calculate category counts based on current filters
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    categories.forEach(category => {
+      counts[category.name] = products.filter(product => 
+        product.category === category.name &&
+        (selectedBrands.length === 0 || selectedBrands.includes(product.brand)) &&
+        (!priceFilter || parseFloat(product.price.replace('$', '').replace(',', '')) <= parseFloat(priceFilter) || isNaN(parseFloat(priceFilter)))
+      ).length;
+    });
+    return counts;
+  }, [selectedBrands, priceFilter]);
+
+  // Calculate brand counts based on current filters
+  const brandCounts = useMemo(() => {
+    const counts = {};
+    brands.forEach(brand => {
+      counts[brand] = products.filter(product => 
+        product.brand === brand &&
+        (selectedCategories.length === 0 || selectedCategories.includes(product.category)) &&
+        (!priceFilter || parseFloat(product.price.replace('$', '').replace(',', '')) <= parseFloat(priceFilter) || isNaN(parseFloat(priceFilter)))
+      ).length;
+    });
+    return counts;
+  }, [selectedCategories, priceFilter]);
 
   // Function to handle product card click using slug
   const handleProductClick = (product) => {
@@ -55,10 +145,15 @@ const ShopPage = () => {
             {categories.map((category, index) => (
               <div
                 key={index}
-                className="flex justify-between text-sm text-gray-600 hover:text-blue-600 cursor-pointer"
+                className={`flex justify-between text-sm cursor-pointer transition-colors ${
+                  selectedCategories.includes(category.name)
+                    ? 'text-blue-600 font-medium'
+                    : 'text-gray-600 hover:text-blue-600'
+                }`}
+                onClick={() => handleCategoryToggle(category.name)}
               >
                 <span>{category.name}</span>
-                {category.count > 0 && <span>({category.count})</span>}
+                {categoryCounts[category.name] > 0 && <span>({categoryCounts[category.name]})</span>}
               </div>
             ))}
           </div>
@@ -87,9 +182,12 @@ const ShopPage = () => {
               >
                 <input
                   type="checkbox"
+                  checked={selectedBrands.includes(brand)}
+                  onChange={() => handleBrandToggle(brand)}
                   className="w-4 h-4 border-2 border-gray-300 rounded mr-3 focus:ring-blue-500 focus:ring-2"
                 />
-                <span className="text-gray-700">{brand}</span>
+                <span className="text-gray-700 flex-1">{brand}</span>
+                {brandCounts[brand] > 0 && <span className="text-gray-500 text-sm">({brandCounts[brand]})</span>}
               </label>
             ))}
           </div>
@@ -112,11 +210,16 @@ const ShopPage = () => {
         {openSections.price && (
           <div className="mt-2">
             <input
-              type="text"
-              placeholder="Enter price"
+              type="number"
+              placeholder="Enter max price"
+              value={priceFilter}
+              onChange={handlePriceChange}
               className="w-full p-2 border border-gray-300 rounded text-sm mb-3"
             />
-            <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={resetFilters}
+              className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors"
+            >
               Reset
             </button>
           </div>
@@ -159,7 +262,7 @@ const ShopPage = () => {
             <Menu className="w-4 h-4" />
             Menu
           </button>
-          <span className="text-gray-600">Showing {products.length} products</span>
+          <span className="text-gray-600">Showing {filteredProducts.length} products</span>
         </div>
 
         <div className="flex gap-4 lg:gap-8 p-4 lg:p-6">
@@ -193,8 +296,20 @@ const ShopPage = () => {
 
           {/* Product Grid */}
           <div className="flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {products.map((product) => (
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-gray-500 text-lg mb-2">No products found</div>
+                <div className="text-gray-400 text-sm mb-4">Try adjusting your filters</div>
+                <button 
+                  onClick={resetFilters}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {filteredProducts.map((product) => (
                 <div
                   key={product.id}
                   className="rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer"
@@ -261,8 +376,9 @@ const ShopPage = () => {
                     </div>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

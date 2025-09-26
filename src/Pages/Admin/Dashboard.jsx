@@ -1,11 +1,19 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronLeft, Edit } from 'lucide-react';
+import Apple from '../../assets/images/Apple.png'
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  
+  const handleEditProduct = (productId) => {
+    navigate(`/admin/update-product/${productId}`);
+  };
+
   const products = [
     {
       id: 1,
-      image: "/api/placeholder/150/100",
+      image: Apple,
       name: "Apple MacBook Pro 2019 | 16\"",
       specs: "RAM 16 | GB | Memory 512 GB Keyboard layout Eng Bulgarian",
       price: "$749.99",
@@ -13,7 +21,7 @@ export default function Dashboard() {
     },
     {
       id: 2,
-      image: "/api/placeholder/150/100",
+      image: Apple,
       name: "Apple MacBook Pro 2019 | 16\"",
       specs: "RAM 16 | GB | Memory 512 GB Keyboard layout Eng Bulgarian",
       price: "$749.99",
@@ -21,7 +29,7 @@ export default function Dashboard() {
     },
     {
       id: 3,
-      image: "/api/placeholder/150/100",
+      image: Apple,
       name: "Apple MacBook Pro 2019 | 16\"",
       specs: "RAM 16 | GB | Memory 512 GB Keyboard layout Eng Bulgarian",
       price: "$749.99",
@@ -29,7 +37,7 @@ export default function Dashboard() {
     },
     {
       id: 4,
-      image: "/api/placeholder/150/100",
+      image: Apple,
       name: "Apple MacBook Pro 2019 | 16\"",
       specs: "RAM 16 | GB | Memory 512 GB Keyboard layout Eng Bulgarian",
       price: "$749.99",
@@ -43,7 +51,10 @@ export default function Dashboard() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <button className="flex items-center text-gray-600 hover:text-gray-800 mb-6">
+          <button 
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-600 hover:text-gray-800 mb-6 transition-colors cursor-pointer"
+          >
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back
           </button>
@@ -53,12 +64,15 @@ export default function Dashboard() {
               <button className="text-blue-600 font-medium border-b-2 border-blue-600 pb-1">
                 Products
               </button>
-              <button className="text-gray-600 hover:text-gray-800 font-medium">
+              <button 
+                onClick={() => navigate('/admin/create-product')}
+                className="text-gray-600 hover:text-gray-800 font-medium transition-colors cursor-pointer"
+              >
                 Create Product
               </button>
             </div>
             <div className="text-gray-600">
-              <span className="font-medium">Total: 06</span>
+              <span className="font-medium">Total: 04</span>
             </div>
           </div>
         </div>
@@ -71,7 +85,7 @@ export default function Dashboard() {
                 <img 
                   src={product.image} 
                   alt={product.name}
-                  className="w-full h-24 object-cover rounded-md  to-red-500"
+                  className="w-full h-54 object-cover rounded-md  to-red-500"
                 />
               </div>
               
@@ -86,7 +100,11 @@ export default function Dashboard() {
                   <span className="font-semibold text-gray-800">
                     {product.price}
                   </span>
-                  <button className="text-blue-600 hover:text-blue-800 p-1">
+                  <button 
+                    onClick={() => handleEditProduct(product.id)}
+                    className="text-blue-600 hover:text-blue-800 p-1 transition-colors cursor-pointer"
+                    title="Edit product"
+                  >
                     <Edit className="w-4 h-4" />
                   </button>
                 </div>

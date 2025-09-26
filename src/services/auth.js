@@ -264,3 +264,205 @@ export const getCurrentUser = () => {
   const user = localStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 };
+
+// Admin Registration
+export const registerAdmin = async (adminData) => {
+  try {
+    console.log('🚀 Starting admin registration with data:', adminData);
+    
+    const payload = {
+      username: adminData.username,
+      email: adminData.email,
+      password: adminData.password,
+      role: 'admin' // Explicitly set role as admin
+    };
+    
+    console.log('📤 Sending admin payload to /users:', payload);
+    
+    // Retry logic for Render.com cold starts
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`🔄 Attempt ${retryCount + 1} of ${maxRetries + 1}...`);
+        response = await apiClient.post('/users', payload);
+        console.log('✅ Admin registration successful:', response.data);
+        console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+        break;
+      } catch (error) {
+        if (error.code === 'ECONNABORTED' && retryCount < maxRetries) {
+          console.log(`⏳ Timeout on attempt ${retryCount + 1}, retrying...`);
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          continue;
+        }
+        throw error;
+      }
+    }
+    
+    // Store token and admin info if registration returns them
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      console.log('💾 Token stored');
+    } else {
+      // If no token, create a mock token for session management
+      const mockToken = 'admin-mock-token-' + Date.now();
+      localStorage.setItem('token', mockToken);
+      console.log('💾 Mock admin token stored for session');
+    }
+    
+    // Store admin data with role
+    const processedAdminData = {
+      ...response.data,
+      fullName: response.data.fullName || response.data.username || `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || 'Admin',
+      username: response.data.username || response.data.email || 'Admin',
+      role: 'admin'
+    };
+    localStorage.setItem('user', JSON.stringify(processedAdminData));
+    console.log('👤 Admin data stored:', processedAdminData);
+    
+    return {
+      success: true,
+      data: {
+        ...response.data,
+        user: processedAdminData
+      },
+      message: 'Admin registration successful!'
+    };
+  } catch (error) {
+    console.error('❌ Admin registration error:', error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error status:', error.response?.status);
+    console.error('❌ Error code:', error.code);
+    
+    let errorMessage = 'Admin registration failed. Please try again.';
+    
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. The server is taking too long to respond. Please try again.';
+    } else if (error.code === 'ERR_NETWORK') {
+      errorMessage = 'Cannot connect to server. Please check your internet connection and try again.';
+    } else if (error.code === 'ERR_CONNECTION_REFUSED') {
+      errorMessage = 'Connection refused. Please try again later.';
+    } else if (error.response?.status === 400) {
+      errorMessage = error.response.data?.message || 'Invalid admin registration data.';
+    } else if (error.response?.status === 409) {
+      errorMessage = 'Email already exists. Please use a different email.';
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    return {
+      success: false,
+      message: errorMessage,
+      error: error.response?.data
+    };
+  }
+};
+
+// Admin Login
+export const loginAdmin = async (adminData) => {
+  try {
+    console.log('🚀 Starting admin login with data:', { email: adminData.email });
+    
+    const payload = {
+      email: adminData.email,
+      password: adminData.password,
+      role: 'admin' // Explicitly specify admin role
+    };
+    
+    console.log('📤 Sending admin login payload to /users/auth');
+    
+    // Retry logic for Render.com cold starts
+    let response;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`🔄 Attempt ${retryCount + 1} of ${maxRetries + 1}...`);
+        response = await apiClient.post('/users/auth', payload);
+        console.log('✅ Admin login successful:', response.data);
+        console.log('📋 Full response data:', JSON.stringify(response.data, null, 2));
+        break;
+      } catch (error) {
+        if (error.code === 'ECONNABORTED' && retryCount < maxRetries) {
+          console.log(`⏳ Timeout on attempt ${retryCount + 1}, retrying...`);
+          retryCount++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+          continue;
+        }
+        throw error;
+      }
+    }
+    
+    // Store token and admin info
+    if (response.data.token) {
+      localStorage.setItem('token', response.data.token);
+      console.log('💾 Token stored');
+    } else {
+      // If no token, create a mock token for session management
+      const mockToken = 'admin-mock-token-' + Date.now();
+      localStorage.setItem('token', mockToken);
+      console.log('💾 Mock admin token stored for session');
+    }
+    
+    // Store admin data with role
+    const processedAdminData = {
+      ...response.data,
+      fullName: response.data.fullName || response.data.username || `${response.data.firstName || ''} ${response.data.lastName || ''}`.trim() || 'Admin',
+      username: response.data.username || response.data.email || 'Admin',
+      role: 'admin'
+    };
+    localStorage.setItem('user', JSON.stringify(processedAdminData));
+    console.log('👤 Admin data stored:', processedAdminData);
+    
+    return {
+      success: true,
+      data: {
+        ...response.data,
+        user: processedAdminData
+      },
+      message: 'Admin login successful!'
+    };
+  } catch (error) {
+    console.error('❌ Admin login error:', error);
+    console.error('❌ Error response:', error.response?.data);
+    console.error('❌ Error status:', error.response?.status);
+    console.error('❌ Error code:', error.code);
+    
+    let errorMessage = 'Admin login failed. Please check your credentials.';
+    
+    if (error.code === 'ECONNABORTED') {
+      errorMessage = 'Request timed out. The server is taking too long to respond. Please try again.';
+    } else if (error.code === 'ERR_NETWORK') {
+      errorMessage = 'Cannot connect to server. Please check your internet connection and try again.';
+    } else if (error.code === 'ERR_CONNECTION_REFUSED') {
+      errorMessage = 'Connection refused. Please try again later.';
+    } else if (error.response?.status === 401) {
+      errorMessage = 'Invalid email or password.';
+    } else if (error.response?.status === 404) {
+      errorMessage = 'Admin not found.';
+    } else if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    }
+    
+    return {
+      success: false,
+      message: errorMessage,
+      error: error.response?.data
+    };
+  }
+};
+
+// Check if user is admin
+export const isAdmin = () => {
+  const user = getCurrentUser();
+  return user && user.role === 'admin';
+};
+
+// Check if user is authenticated and has admin role
+export const isAdminAuthenticated = () => {
+  return isAuthenticated() && isAdmin();
+};

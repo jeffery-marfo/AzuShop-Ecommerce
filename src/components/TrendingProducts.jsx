@@ -1,11 +1,14 @@
 
 import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import Macbook from "../assets/images/Macbook.png"
 import iphones from "../assets/images/iphones.png"
 import Lens from "../assets/images/Lens.png"
 
 function TrendingProducts() {
+  const navigate = useNavigate();
+  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -62,6 +65,10 @@ function TrendingProducts() {
         delay: 0.5
       }
     }
+  };
+
+  const handleShopClick = () => {
+    navigate('/shop');
   };
 
   const products = [
@@ -167,7 +174,8 @@ function TrendingProducts() {
                 
                 {/* Shop Now Button */}
                 <motion.button 
-                  className="group/btn inline-flex items-center text-gray-900 font-medium hover:text-blue-600 transition-colors duration-200 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-transparent rounded-md p-1"
+                  onClick={handleShopClick}
+                  className="group/btn inline-flex items-center text-gray-900 font-medium hover:text-blue-600 transition-colors duration-200 text-sm sm:text-base focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-transparent rounded-md p-1 cursor-pointer"
                   variants={buttonVariants}
                   whileHover={{ x: 5 }}
                   whileTap={{ scale: 0.95 }}
