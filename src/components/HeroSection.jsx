@@ -1,12 +1,14 @@
 
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import herobg from '../assets/images/herobg.png';
 import HeroBG1 from '../assets/images/HeroBG1.png';
 import HeroBG2 from '../assets/images/HeroBG2.png';
 
 function HeroCarousel() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const navigate = useNavigate();
 
   const slides = [
     {
@@ -54,6 +56,10 @@ function HeroCarousel() {
 
   const prevSlide = () => {
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
+  };
+
+  const handleShopClick = () => {
+    navigate('/shop');
   };
 
   return (
@@ -117,7 +123,10 @@ function HeroCarousel() {
               </p>
               
               {/* CTA Button */}
-              <button className="group inline-flex items-center bg-white text-gray-900 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-sm sm:text-base hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-transparent hover:border-gray-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent">
+              <button 
+                onClick={handleShopClick}
+                className="group inline-flex items-center bg-white text-gray-900 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg font-medium text-sm sm:text-base hover:bg-gray-100 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 border border-transparent hover:border-gray-300 active:scale-95 focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent cursor-pointer"
+              >
                 <span>{slides[currentSlide].buttonText}</span>
                 <ChevronRight 
                   size={18} 

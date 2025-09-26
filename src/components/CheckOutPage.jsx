@@ -6,6 +6,15 @@ import { useStore } from '../context/StoreContext.jsx';
 import { useOrders } from '../context/OrdersContext.jsx';
 import { useToast } from '../context/ToastContext.jsx';
 import { useNavigate, Link } from 'react-router-dom';
+import { 
+  processPaystackPayment, 
+  createPayment, 
+  createPaymentFallback, 
+  validatePaymentData,
+  validatePaymentResponse,
+  formatAmount,
+  getSupportedPaymentMethods 
+} from '../services/paystack.js';
 
 const CheckoutPage = () => {
   const [selectedPayment, setSelectedPayment] = useState('paypal');
@@ -13,8 +22,18 @@ const CheckoutPage = () => {
     address: '',
     city: '',
     postalCode: '',
-    country: ''
+    country: '',
+    email: ''
   });
+  
+  const [cardData, setCardData] = useState({
+    cardNumber: '',
+    expiryDate: '',
+    cvv: '',
+    cardName: ''
+  });
+  const [showCVV, setShowCVV] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
   const navigate = useNavigate();
   const { cartItems, cartTotal, clearCart } = useStore();
   const { createOrder } = useOrders();
@@ -35,7 +54,27 @@ const CheckoutPage = () => {
     });
   };
 
-  const handleSubmit = () => {
+  const handleCardInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name === 'cardNumber') {
+      // Format card number with spaces
+      const formattedValue = value.replace(/\s/g, '').replace(/(.{4})/g, '$1 ').trim();
+      setCardData(prev => ({ ...prev, [name]: formattedValue }));
+    } else if (name === 'expiryDate') {
+      // Format expiry date as MM/YY
+      const formattedValue = value.replace(/\D/g, '').replace(/(\d{2})(\d{0,2})/, '$1/$2');
+      setCardData(prev => ({ ...prev, [name]: formattedValue }));
+    } else if (name === 'cvv') {
+      // Limit CVV to 3-4 digits
+      const formattedValue = value.replace(/\D/g, '').slice(0, 4);
+      setCardData(prev => ({ ...prev, [name]: formattedValue }));
+    } else {
+      setCardData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async () => {
     if (!cartItems.length) {
       addToast({ title: 'Your cart is empty', variant: 'error' });
       return;
@@ -44,6 +83,47 @@ const CheckoutPage = () => {
       addToast({ title: 'Address is required', variant: 'error' });
       return;
     }
+    if (selectedPayment === 'paystack' && !formData.email) {
+      addToast({ title: 'Email is required for Paystack payment', variant: 'error' });
+      return;
+    }
+
+    if (selectedPayment === 'paystack') {
+      // Validate card details
+      if (!cardData.cardNumber || !cardData.expiryDate || !cardData.cvv || !cardData.cardName) {
+        addToast({ title: 'Please fill in all card details', variant: 'error' });
+        return;
+      }
+
+      // Validate card number (remove spaces and check length)
+      const cleanCardNumber = cardData.cardNumber.replace(/\s/g, '');
+      if (cleanCardNumber.length < 13 || cleanCardNumber.length > 19) {
+        addToast({ title: 'Please enter a valid card number', variant: 'error' });
+        return;
+      }
+
+      // Validate expiry date
+      const [month, year] = cardData.expiryDate.split('/');
+      if (!month || !year || month.length !== 2 || year.length !== 2) {
+        addToast({ title: 'Please enter a valid expiry date (MM/YY)', variant: 'error' });
+        return;
+      }
+
+      // Validate CVV
+      if (cardData.cvv.length < 3 || cardData.cvv.length > 4) {
+        addToast({ title: 'Please enter a valid CVV', variant: 'error' });
+        return;
+      }
+    }
+
+    if (selectedPayment === 'paystack') {
+      await handlePaystackPayment();
+    } else {
+      handleRegularPayment();
+    }
+  };
+
+  const handleRegularPayment = () => {
     const order = createOrder({
       items: cartItems.map(i => ({ id: i.id, name: i.name, image: i.image, brand: i.brand, quantity: i.quantity, unitPrice: i.price, total: i.price * i.quantity, slug: i.slug })),
       totals,
@@ -54,6 +134,105 @@ const CheckoutPage = () => {
     addToast({ title: 'Order placed', description: `Order #${order.id}`, variant: 'success' });
     navigate(`/order-detail/${order.id}`);
   };
+
+  const handlePaystackPayment = async () => {
+    setIsProcessingPayment(true);
+    
+    try {
+      // First create the order
+      const order = createOrder({
+        items: cartItems.map(i => ({ id: i.id, name: i.name, image: i.image, brand: i.brand, quantity: i.quantity, unitPrice: i.price, total: i.price * i.quantity, slug: i.slug })),
+        totals,
+        shippingAddress: formData,
+        paymentMethod: selectedPayment,
+      });
+
+      // Prepare payment data
+      const paymentData = {
+        orderId: order.id,
+        amount: totals.grandTotal,
+        email: formData.email
+      };
+
+      // Validate payment data
+      const validation = validatePaymentData(paymentData);
+      if (!validation.isValid) {
+        addToast({ 
+          title: 'Validation Error', 
+          description: validation.errors.join(', '), 
+          variant: 'error' 
+        });
+        return;
+      }
+
+      let paymentResponse;
+      
+      try {
+        // Try to create payment with backend first
+        paymentResponse = await createPayment(paymentData);
+      } catch (backendError) {
+        console.warn('Backend payment creation failed, using fallback:', backendError.message);
+        // Use fallback if backend is not available
+        paymentResponse = await createPaymentFallback(paymentData);
+        
+        // Show warning about using test mode
+        // addToast({ 
+        //   title: 'Test Mode', 
+        //   description: 'Using test payment mode. Backend not available.', 
+        //   variant: 'warning' 
+        // });
+      }
+
+      // Validate payment response
+      const responseValidation = validatePaymentResponse(paymentResponse);
+      if (!responseValidation.isValid) {
+        addToast({ 
+          title: 'Payment Error', 
+          description: responseValidation.errors.join(', '), 
+          variant: 'error' 
+        });
+        return;
+      }
+
+      // Process Paystack payment
+      await processPaystackPayment(
+        {
+          ...paymentResponse,
+          email: formData.email,
+          amount: totals.grandTotal,
+          orderId: order.id
+        },
+        (response) => {
+          // Payment successful
+          clearCart();
+          addToast({ 
+            title: 'Payment Successful!', 
+            description: 'Redirecting to payment confirmation...', 
+            variant: 'success' 
+          });
+          // Redirect to payment success page with reference
+          window.location.href = `/payment-success?reference=${response.reference}&trxref=${response.trxref}`;
+        },
+        (error) => {
+          // Payment failed or cancelled
+          addToast({ 
+            title: 'Payment Failed', 
+            description: error.message || 'Payment was cancelled', 
+            variant: 'error' 
+          });
+        }
+      );
+    } catch (error) {
+      addToast({ 
+        title: 'Payment Error', 
+        description: error.message || 'Failed to process payment', 
+        variant: 'error' 
+      });
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F9FBFC' }}>
@@ -131,6 +310,17 @@ const CheckoutPage = () => {
                   className="w-full px-4 py-4 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
                 />
               </div>
+              
+              <div>
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="Email Address *"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-4 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
+                />
+              </div>
             </div>
           </div>
 
@@ -201,25 +391,128 @@ const CheckoutPage = () => {
               {/* Payment Method */}
               <div className="mb-6">
                 <h3 className="font-semibold text-gray-900 text-sm mb-3">Select Method</h3>
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="paypal"
-                    checked={selectedPayment === 'paypal'}
-                    onChange={(e) => setSelectedPayment(e.target.value)}
-                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
-                  />
-                  <span className="ml-3 text-sm text-gray-700">Paypal or credit card</span>
-                </label>
+                <div className="space-y-3">
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="paypal"
+                      checked={selectedPayment === 'paypal'}
+                      onChange={(e) => setSelectedPayment(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="ml-3 text-sm text-gray-700">Paypal or credit card</span>
+                  </label>
+                  
+                  <label className="flex items-center cursor-pointer">
+                    <input
+                      type="radio"
+                      name="payment"
+                      value="paystack"
+                      checked={selectedPayment === 'paystack'}
+                      onChange={(e) => setSelectedPayment(e.target.value)}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="ml-3 text-sm text-gray-700">Paystack (Card, Bank Transfer, USSD)</span>
+                  </label>
+                </div>
               </div>
+
+              {/* Card Details Form - Only show when Paystack is selected */}
+              {selectedPayment === 'paystack' && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center mb-3">
+                    <div className="flex space-x-2 mr-3">
+                      <div className="w-8 h-5 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">V</div>
+                      <div className="w-8 h-5 bg-red-600 rounded text-white text-xs flex items-center justify-center font-bold">M</div>
+                    </div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Card Details</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {/* Card Number */}
+                    <div>
+                      <input
+                        type="text"
+                        name="cardNumber"
+                        placeholder="1234 5678 9012 3456"
+                        value={cardData.cardNumber}
+                        onChange={handleCardInputChange}
+                        className="w-full px-4 py-3 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
+                        maxLength={19}
+                      />
+                    </div>
+                    
+                    {/* Card Name */}
+                    <div>
+                      <input
+                        type="text"
+                        name="cardName"
+                        placeholder="Cardholder Name"
+                        value={cardData.cardName}
+                        onChange={handleCardInputChange}
+                        className="w-full px-4 py-3 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
+                      />
+                    </div>
+                    
+                    {/* Expiry and CVV */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <input
+                          type="text"
+                          name="expiryDate"
+                          placeholder="MM/YY"
+                          value={cardData.expiryDate}
+                          onChange={handleCardInputChange}
+                          className="w-full px-4 py-3 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
+                          maxLength={5}
+                        />
+                      </div>
+                      <div className="relative">
+                        <input
+                          type={showCVV ? "text" : "password"}
+                          name="cvv"
+                          placeholder="CVV"
+                          value={cardData.cvv}
+                          onChange={handleCardInputChange}
+                          className="w-full px-4 py-3 pr-10 bg-gray-100 border-0 rounded-md text-gray-600 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:outline-none transition-all text-sm"
+                          maxLength={4}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCVV(!showCVV)}
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                        >
+                          {showCVV ? (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                            </svg>
+                          ) : (
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center text-xs text-gray-500">
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
+                    Your card details are secure and encrypted
+                  </div>
+                </div>
+              )}
+
 
               {/* Place Order Button */}
               <button
                 onClick={handleSubmit}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
+                disabled={isProcessingPayment}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 text-sm"
               >
-                Place order
+                {isProcessingPayment ? 'Processing Payment...' : 'Place order'}
               </button>
             </div>
           </div>

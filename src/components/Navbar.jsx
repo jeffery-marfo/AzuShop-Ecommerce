@@ -206,6 +206,8 @@ import { useNavigate } from 'react-router';
 import { Home, ShoppingBag, ShoppingCart, Heart, LogIn, UserPlus, Menu, X, ChevronDown, User, Settings, Package, LogOut } from 'lucide-react';
 import LoginModal from './LoginModal';
 import RegisterModal from './RegisterModal';
+import AdminLoginModal from './AdminLoginModal';
+import AdminRegisterModal from './AdminRegisterModal';
 import { logoutUser } from '../services/auth'; // Import the logout function
 import { useStore } from '../context/StoreContext.jsx';
 
@@ -213,6 +215,8 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isAdminLoginModalOpen, setIsAdminLoginModalOpen] = useState(false);
+  const [isAdminRegisterModalOpen, setIsAdminRegisterModalOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   
@@ -300,6 +304,37 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
     setIsRegisterModalOpen(true);
   };
 
+  // Admin modal handlers
+  const handleAdminLoginClick = () => {
+    setIsAdminLoginModalOpen(true);
+    setIsAdminRegisterModalOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleAdminRegisterClick = () => {
+    setIsAdminRegisterModalOpen(true);
+    setIsAdminLoginModalOpen(false);
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleCloseAdminLoginModal = () => {
+    setIsAdminLoginModalOpen(false);
+  };
+
+  const handleCloseAdminRegisterModal = () => {
+    setIsAdminRegisterModalOpen(false);
+  };
+
+  const handleSwitchToAdminLogin = () => {
+    setIsAdminRegisterModalOpen(false);
+    setIsAdminLoginModalOpen(true);
+  };
+
+  const handleSwitchToAdminRegister = () => {
+    setIsAdminLoginModalOpen(false);
+    setIsAdminRegisterModalOpen(true);
+  };
+
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
@@ -335,6 +370,35 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
     setIsLoginModalOpen(true);
   };
 
+  // Handle successful admin login
+  const handleAdminLoginSuccess = (userData, token) => {
+    // Get the processed user data from localStorage (which has the proper formatting)
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        const processedUserData = JSON.parse(storedUser);
+        setUser(processedUserData);
+        console.log('👤 Admin user set in navbar from localStorage:', processedUserData);
+      } catch (error) {
+        console.error('Error parsing stored admin user data:', error);
+        setUser(userData);
+      }
+    } else {
+      console.log('👤 No stored admin user data, using passed userData:', userData);
+      setUser(userData);
+    }
+    setIsLoggedIn(true);
+    setIsAdminLoginModalOpen(false);
+    // Navigate to admin dashboard
+    navigate('/admin-dashboard');
+  };
+
+  // Handle successful admin registration (redirect to admin login)
+  const handleAdminRegistrationSuccess = () => {
+    setIsAdminRegisterModalOpen(false);
+    setIsAdminLoginModalOpen(true);
+  };
+
   // Handle logout
   const handleLogout = () => {
     setUser(null);
@@ -355,7 +419,8 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
 
   const authItems = [
     { name: 'Login', icon: LogIn, onClick: handleLoginClick },
-    { name: 'Register', icon: UserPlus, onClick: handleRegisterClick }
+    { name: 'Register', icon: UserPlus, onClick: handleRegisterClick },
+    { name: 'Admin', icon: Settings, onClick: handleAdminLoginClick, isAdmin: true }
   ];
 
   // User dropdown items based on user role
@@ -421,11 +486,15 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
           <div className="hidden md:flex items-center space-x-4 lg:space-x-6 flex-shrink-0">
             {!isLoggedIn ? (
               // Show login/register buttons when not logged in
-              authItems.map(({ name, icon: Icon, onClick }) => (
+              authItems.map(({ name, icon: Icon, onClick, isAdmin }) => (
                 <div 
                   key={name}
                   onClick={onClick}
-                  className="flex items-center space-x-1 lg:space-x-2 text-gray-700 hover:text-gray-900 cursor-pointer transition-colors duration-200"
+                  className={`flex items-center space-x-1 lg:space-x-2 cursor-pointer transition-colors duration-200 ${
+                    isAdmin 
+                      ? 'text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100 px-3 py-2 rounded-lg' 
+                      : 'text-gray-700 hover:text-gray-900'
+                  }`}
                 >
                   <Icon size={20} />
                   <span className="text-sm font-medium hidden lg:inline">{name}</span>
@@ -552,11 +621,15 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
                 <div className="space-y-3">
                   {!isLoggedIn ? (
                     // Show auth items when not logged in
-                    authItems.map(({ name, icon: Icon, onClick }) => (
+                    authItems.map(({ name, icon: Icon, onClick, isAdmin }) => (
                       <div 
                         key={name}
                         onClick={onClick}
-                        className="flex items-center space-x-3 cursor-pointer py-2 px-3 rounded-lg text-gray-700 hover:bg-gray-50 hover:text-gray-900 transition-colors duration-200"
+                        className={`flex items-center space-x-3 cursor-pointer py-2 px-3 rounded-lg transition-colors duration-200 ${
+                          isAdmin 
+                            ? 'text-purple-700 hover:text-purple-900 bg-purple-50 hover:bg-purple-100' 
+                            : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                        }`}
                       >
                         <Icon size={20} />
                         <span className="text-base font-medium">{name}</span>
@@ -619,6 +692,22 @@ function Navbar({ initialTab = 'Home', onTabChange }) {
         onClose={handleCloseRegisterModal}
         onSwitchToLogin={handleSwitchToLogin}
         onRegistrationSuccess={handleRegistrationSuccess}
+      />
+
+      {/* Admin Login Modal */}
+      <AdminLoginModal 
+        isOpen={isAdminLoginModalOpen} 
+        onClose={handleCloseAdminLoginModal}
+        onSwitchToRegister={handleSwitchToAdminRegister}
+        onLoginSuccess={handleAdminLoginSuccess}
+      />
+
+      {/* Admin Register Modal */}
+      <AdminRegisterModal 
+        isOpen={isAdminRegisterModalOpen} 
+        onClose={handleCloseAdminRegisterModal}
+        onSwitchToLogin={handleSwitchToAdminLogin}
+        onRegistrationSuccess={handleAdminRegistrationSuccess}
       />
     </>
   );
