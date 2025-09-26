@@ -78,6 +78,8 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000, // 30 second timeout for Render.com
+  withCredentials: false, // Don't send cookies with requests
+  mode: 'cors', // Enable CORS
 });
 
 apiClient.interceptors.request.use(
@@ -100,6 +102,12 @@ apiClient.interceptors.response.use(
       console.error('Network Error: Please check if the backend server is running');
     }
     
+    // Handle CORS errors specifically
+    if (error.message?.includes('CORS') || error.code === 'ERR_NETWORK') {
+      console.error('CORS Error: Backend needs to allow requests from this domain');
+      // You could show a more specific error message to the user here
+    }
+    
     // Handle authentication errors
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -111,7 +119,8 @@ apiClient.interceptors.response.use(
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
-      data: error.response?.data
+      data: error.response?.data,
+      message: error.message
     });
     
     return Promise.reject(error);
